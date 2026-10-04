@@ -20,7 +20,7 @@ Referensi kriteria selesai tiap task ada di `architecture.md` Section 5. File in
 
 | # | Task | Status | Catatan |
 |---|---|---|---|
-| 1.1 | Login Google di web dashboard (+ scope Calendar) | 🔴 | |
+| 1.1 | Login Google di web dashboard (+ scope Calendar) | 🟢 | Login berhasil dicoba manual, refresh token terkonfirmasi tersimpan di `google_tokens`. Sempat ketemu & diperbaiki 2 bug saat uji coba: GRANT tabel belum ke-setup di project asli (migration tambahan), dan Edge Function belum handle CORS. |
 | 1.2 | Login Google di mobile app | 🔴 | |
 | 1.3 | Proteksi akses single-user (`OWNER_EMAIL`) | 🔴 | |
 
@@ -100,3 +100,4 @@ Referensi kriteria selesai tiap task ada di `architecture.md` Section 5. File in
 
 - **2026-10-04**: Tambah fitur Kantong (Kantong Utama sebagai angka hasil hitung dari toggle "termasuk kantong utama" di tiap `funds`, sub-kantong untuk breakdown alokasi uang, dan aturan alokasi otomatis dari pemasukan ke sub-kantong) — `prd.md` Section 4.9, `architecture.md` Section 3/4.5/5 (Milestone 8). Kolom `is_goal` di tabel `funds` diganti jadi `tipe` enum (`sumber_dana`/`kantong`/`goal`) supaya bisa nampung 3 jenis fund. Goal nabung & budget per kategori tetap berjalan seperti semula, tidak berubah perilakunya.
 - **2026-10-04**: Finalisasi desain schema database sebelum migration ditulis (task 0.3) — `architecture.md` Section 3/4.1 diperbarui: (1) tambah tabel `app_settings` (1 baris, kolom `owner_email`) — `OWNER_EMAIL` pindah dari rencana awal environment variable jadi baris data ini, biar bisa ganti akun testing tanpa ubah kode; (2) tambah kolom `tipe` (pemasukan/pengeluaran) di `categories`, karena desain awal belum ada pembeda ini; (3) tambah kolom `updated_at` di `categories`, `funds`, `transactions`, `aturan_kantong`; (4) sejumlah validasi yang awalnya rencananya cuma di level aplikasi (field goal di `funds`, tipe kantong tujuan & kategori pemicu di `aturan_kantong`, total persentase ≤100%) dipindah jadi constraint/trigger di database biar lebih kuat. Tidak ada perubahan fitur yang terlihat user — murni penguatan desain data. Detail lengkap tiap keputusan ada di `doc/database-schema.md` (catatan kerja, tidak di-commit).
+- **2026-10-04**: Edge Function `save-google-token` dibuat lebih awal dari rencana (saat task 1.1, bukan nunggu Milestone 5) — `architecture.md` Section 2/4.1. Alasannya: DoD task 1.1 sendiri sudah mensyaratkan refresh token Google tersimpan ke `google_tokens` saat login, dan tabel itu tertutup total dari client (keputusan task 0.3), jadi butuh 1 Edge Function kecil buat nangkep & nyimpennya saat itu juga (momennya cuma sekali, gak bisa diulang tanpa login ulang). Function ini sempit scope-nya (cuma simpen token), bukan `calendar-proxy` yang lengkap — itu tetap di Milestone 5.

@@ -26,6 +26,27 @@
   border: 1px solid var(--accent-border);
 }
 
+.area-login {
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.info-akun {
+  font-size: 14px;
+}
+
+.tombol-login {
+  padding: 8px 18px;
+  border-radius: 999px;
+  font-size: 14px;
+  border: 1px solid var(--accent-border);
+  background: var(--accent-bg);
+  color: var(--accent);
+  cursor: pointer;
+}
+
 .daftar-fitur {
   margin-top: 48px;
   width: 100%;

@@ -30,7 +30,9 @@
 ```
 [Expo App] ──┐
              ├──> [Supabase Auth (Google OAuth)] ──> [Supabase Postgres]
-[Web React] ─┘                                              │
+[Web React] ─┘        │                                      │
+                       └──> [Edge Function: save-google-token] ──> tabel google_tokens
+                                                              │
                                                               ├──> [Edge Function: sheets-sync] ──> Google Sheets API
                                                               ├──> [Edge Function: calendar-proxy] ──> Google Calendar API
                                                               └──> [Edge Function: report-generate] ──> PDF/Sheets export
@@ -145,6 +147,7 @@ Cache ringan supaya app gak perlu selalu hit Google API buat nampilin daftar eve
 - Setelah login berhasil, cek email user terhadap `owner_email` di tabel `app_settings` (Section 3) — bukan hardcode di environment variable, supaya ganti akun owner (misal buat testing) tinggal ubah 1 baris data. Kalau tidak cocok → langsung sign-out & tolak akses.
 - Proteksi ini berlaku 2 lapis: dicek di app saat login (poin di atas), **dan** dijaga ulang di level database lewat RLS — setiap tabel (kecuali `google_tokens`, lihat Section 3) hanya mengizinkan baris diakses kalau email yang sedang login cocok dengan `owner_email` di `app_settings`. Jadi proteksi tetap berlaku walau ada jalur akses lain di luar pengecekan login app.
 - Refresh token Google disimpan di tabel `google_tokens` (bukan di client) — dipakai Edge Function `calendar-proxy` untuk semua request ke Calendar API.
+- **Menangkap refresh token saat login**: Google cuma mengirim refresh token sekali, tepat saat login diotorisasi (dengan `access_type=offline` + `prompt=consent`). Client menangkapnya dari `session.provider_refresh_token` lalu segera mengirimkannya ke Edge Function `save-google-token`, karena `google_tokens` tertutup total dari client (Section 3) — cuma Edge Function ini (pakai service role) yang boleh menulis ke sana. Function ini memverifikasi identitas pemanggil dulu (harus cocok `owner_email`) sebelum menyimpan.
 
 ### 4.2 Offline-First Transaksi
 - Transaksi dibuat dengan UUID di client (pakai `expo-crypto` atau lib UUID), disimpan dulu ke SQLite lokal dengan status `pending`.
