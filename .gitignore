@@ -1,6 +1,8 @@
 CLAUDE.md
 workflow.md
 skill.md
+mobile/AGENTS.md
+mobile/.claude/
 
 .env
 .env.*

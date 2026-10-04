@@ -13,8 +13,8 @@ Referensi kriteria selesai tiap task ada di `architecture.md` Section 5. File in
 | 0.1 | Setup project Supabase | 🟢 | |
 | 0.2 | Setup Google Cloud project (OAuth + Calendar API + Sheets API + Service Account) | 🟢 | |
 | 0.3 | Buat schema database (semua tabel + RLS) | 🔴 | |
-| 0.4 | Setup Expo project (jalan di Expo Go) | 🔴 | |
-| 0.5 | Setup web project (deploy kosong ke Vercel) | 🔴 | |
+| 0.4 | Setup Expo project (jalan di Expo Go) | 🟢 | |
+| 0.5 | Setup web project (deploy kosong ke Vercel) | 🟡 | Project React+Vite sudah jalan lokal, belum di-deploy ke Vercel |
 
 ## Milestone 1 — Auth
 
