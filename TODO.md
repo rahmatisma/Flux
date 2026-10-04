@@ -12,7 +12,7 @@ Referensi kriteria selesai tiap task ada di `architecture.md` Section 5. File in
 |---|---|---|---|
 | 0.1 | Setup project Supabase | 🟢 | |
 | 0.2 | Setup Google Cloud project (OAuth + Calendar API + Sheets API + Service Account) | 🟢 | |
-| 0.3 | Buat schema database (semua tabel + RLS) | 🔴 | |
+| 0.3 | Buat schema database (semua tabel + RLS) | 🟢 | Migration diterapkan ke project Supabase asli (push sukses), lolos 20 skenario tes di lingkungan lokal sebelum diterapkan. Developer memilih percaya hasil verifikasi Claude Code tanpa cek manual terpisah lewat Studio. |
 | 0.4 | Setup Expo project (jalan di Expo Go) | 🟢 | |
 | 0.5 | Setup web project (deploy kosong ke Vercel) | 🟢 | Live di https://flux-lac-xi.vercel.app/ |
 
@@ -99,3 +99,4 @@ Referensi kriteria selesai tiap task ada di `architecture.md` Section 5. File in
 *(Catatan singkat kalau ada keputusan yang mengubah scope setelah `prd.md`/`architecture.md` fix — biar gak hilang jejak kenapa sesuatu berubah.)*
 
 - **2026-10-04**: Tambah fitur Kantong (Kantong Utama sebagai angka hasil hitung dari toggle "termasuk kantong utama" di tiap `funds`, sub-kantong untuk breakdown alokasi uang, dan aturan alokasi otomatis dari pemasukan ke sub-kantong) — `prd.md` Section 4.9, `architecture.md` Section 3/4.5/5 (Milestone 8). Kolom `is_goal` di tabel `funds` diganti jadi `tipe` enum (`sumber_dana`/`kantong`/`goal`) supaya bisa nampung 3 jenis fund. Goal nabung & budget per kategori tetap berjalan seperti semula, tidak berubah perilakunya.
+- **2026-10-04**: Finalisasi desain schema database sebelum migration ditulis (task 0.3) — `architecture.md` Section 3/4.1 diperbarui: (1) tambah tabel `app_settings` (1 baris, kolom `owner_email`) — `OWNER_EMAIL` pindah dari rencana awal environment variable jadi baris data ini, biar bisa ganti akun testing tanpa ubah kode; (2) tambah kolom `tipe` (pemasukan/pengeluaran) di `categories`, karena desain awal belum ada pembeda ini; (3) tambah kolom `updated_at` di `categories`, `funds`, `transactions`, `aturan_kantong`; (4) sejumlah validasi yang awalnya rencananya cuma di level aplikasi (field goal di `funds`, tipe kantong tujuan & kategori pemicu di `aturan_kantong`, total persentase ≤100%) dipindah jadi constraint/trigger di database biar lebih kuat. Tidak ada perubahan fitur yang terlihat user — murni penguatan desain data. Detail lengkap tiap keputusan ada di `doc/database-schema.md` (catatan kerja, tidak di-commit).

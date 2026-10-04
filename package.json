@@ -1,0 +1,24 @@
+{
+  "name": "apk-manajement",
+  "version": "1.0.0",
+  "description": "Aplikasi personal untuk mencatat transaksi keuangan (sync otomatis ke Google Sheets) dan mengelola jadwal (Google Calendar) dalam satu tempat, lengkap dengan budget per kategori, kantong alokasi dana, dan goal nabung.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rahmatisma/Flux.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/rahmatisma/Flux/issues"
+  },
+  "homepage": "https://github.com/rahmatisma/Flux#readme",
+  "devDependencies": {
+    "supabase": "^2.119.0"
+  }
+}

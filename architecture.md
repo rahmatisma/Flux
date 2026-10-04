@@ -43,15 +43,25 @@
 
 ## 3. Data Model (Supabase Postgres)
 
+### `app_settings`
+Satu-satunya sumber kebenaran "siapa pemilik app ini". Selalu cuma 1 baris. Dipakai RLS di semua tabel lain (Section 4.1) dan dicek app pas login — supaya ganti akun owner (misal buat testing) tinggal ubah 1 baris data, tidak perlu ubah kode atau environment variable.
+| Kolom | Tipe | Catatan |
+|---|---|---|
+| id | uuid (PK) | |
+| owner_email | text, not null | Email Google yang diizinkan akses app |
+| updated_at | timestamptz | |
+
 ### `categories`
 | Kolom | Tipe | Catatan |
 |---|---|---|
 | id | uuid (PK) | |
 | nama | text | |
-| limit_nominal | numeric, nullable | Budget, opsional |
+| tipe | enum('pemasukan','pengeluaran'), not null | Jenis transaksi yang boleh pakai kategori ini; juga nentuin boleh/tidaknya diisi budget |
+| limit_nominal | numeric, nullable | Budget, opsional. Constraint DB: hanya boleh diisi kalau `tipe = 'pengeluaran'`, dan wajib diisi bareng `periode` (gak boleh salah satu doang) |
 | periode | enum('mingguan','bulanan'), nullable | Wajib diisi kalau `limit_nominal` diisi |
-| periode_start_date | date, nullable | Untuk periode mingguan — tanggal dibuat, jadi acuan siklus rolling 7 hari |
+| periode_start_date | date, nullable | Untuk periode mingguan — tanggal dibuat, jadi acuan siklus rolling 7 hari. Constraint DB: wajib diisi kalau `periode = 'mingguan'`, wajib kosong kalau `periode = 'bulanan'` atau tidak ada budget |
 | created_at | timestamptz | |
+| updated_at | timestamptz | Terisi otomatis (trigger) tiap baris diubah |
 
 ### `funds` (sumber dana fisik + kantong + goal nabung)
 | Kolom | Tipe | Catatan |
@@ -59,10 +69,11 @@
 | id | uuid (PK) | |
 | nama | text | |
 | tipe | enum('sumber_dana','kantong','goal') | `sumber_dana` = tunai/bank fisik, `kantong` = sub-kantong budget (lihat Section 4.5), `goal` = goal nabung |
-| termasuk_kantong_utama | boolean, default true | Dipakai hitung "Kantong Utama" (Section 4.5) — default `true` untuk tipe `sumber_dana`, default `false` untuk tipe `kantong`/`goal` (mencegah hitung dobel saat uang sudah dipindah ke kantong/goal), bisa diubah manual |
-| goal_target_nominal | numeric, nullable | Hanya kalau `tipe = 'goal'` |
-| goal_deadline | date, nullable | Hanya kalau `tipe = 'goal'` |
+| termasuk_kantong_utama | boolean, not null | Dipakai hitung "Kantong Utama" (Section 4.5). Diisi otomatis lewat trigger kalau tidak ditentukan eksplisit saat insert: `true` untuk tipe `sumber_dana`, `false` untuk tipe `kantong`/`goal` (mencegah hitung dobel saat uang sudah dipindah ke kantong/goal) — bisa diubah manual kapan saja setelahnya |
+| goal_target_nominal | numeric, nullable | Constraint DB: wajib diisi kalau `tipe = 'goal'`, dilarang diisi kalau bukan `'goal'` |
+| goal_deadline | date, nullable | Constraint DB: wajib diisi kalau `tipe = 'goal'`, dilarang diisi kalau bukan `'goal'` |
 | created_at | timestamptz | |
+| updated_at | timestamptz | Terisi otomatis (trigger) tiap baris diubah |
 
 ### `transactions`
 | Kolom | Tipe | Catatan |
@@ -78,19 +89,21 @@
 | calendar_event_id | text, nullable | ID event Google Calendar, null = "Lain-lain" |
 | sync_status | enum('pending','synced','failed') | Untuk tracking sync ke Sheets |
 | created_at | timestamptz | |
+| updated_at | timestamptz | Terisi otomatis (trigger) tiap baris diubah |
 
 ### `aturan_kantong`
 Aturan alokasi otomatis dari pemasukan ke kantong (lihat Section 4.5 & `prd.md` Section 4.9).
 | Kolom | Tipe | Catatan |
 |---|---|---|
 | id | uuid (PK) | |
-| kantong_tujuan_id | uuid, FK → funds | Harus fund dengan `tipe = 'kantong'` |
-| category_id | uuid, FK → categories | Kategori pemasukan yang jadi pemicu |
+| kantong_tujuan_id | uuid, FK → funds | Constraint DB (trigger): harus fund dengan `tipe = 'kantong'`, ditolak kalau bukan |
+| category_id | uuid, FK → categories | Constraint DB (trigger): harus kategori dengan `tipe = 'pemasukan'`, ditolak kalau bukan |
 | persentase | numeric | 0–100 |
 | aktif | boolean, default true | |
 | created_at | timestamptz | |
+| updated_at | timestamptz | Terisi otomatis (trigger) tiap baris diubah |
 
-Validasi aplikasi (bukan constraint database): total `persentase` dari semua baris `aktif = true` dengan `category_id` yang sama tidak boleh melebihi 100.
+Validasi database (trigger, bukan cuma di aplikasi): total `persentase` dari semua baris `aktif = true` dengan `category_id` yang sama tidak boleh melebihi 100 — dicek ulang tiap ada baris baru/diubah.
 
 ### `budget_period_state`
 Tabel bantu untuk mencegah notifikasi budget terkirim berkali-kali dalam 1 periode yang sama.
@@ -104,8 +117,10 @@ Tabel bantu untuk mencegah notifikasi budget terkirim berkali-kali dalam 1 perio
 | notified_100 | boolean, default false | |
 | recap_notified | boolean, default false | |
 
+Constraint DB: kombinasi `category_id` + `period_start` harus unik (gak boleh ada 2 baris status untuk periode yang sama).
+
 ### `google_tokens`
-Disimpan terenkripsi, dipakai Edge Function untuk akses Calendar API. Hanya 1 baris (single user).
+Disimpan terenkripsi, dipakai Edge Function untuk akses Calendar API. Hanya 1 baris (single user). **Tertutup total dari client** (app/web) — beda dari tabel lain yang dijaga lewat RLS owner-email, tabel ini tidak dikasih akses sama sekali ke role client, hanya bisa diakses lewat Edge Function (service role) karena isinya kredensial sensitif.
 | Kolom | Tipe | Catatan |
 |---|---|---|
 | id | uuid (PK) | |
@@ -127,7 +142,8 @@ Cache ringan supaya app gak perlu selalu hit Google API buat nampilin daftar eve
 
 ### 4.1 Autentikasi & Akses Tunggal
 - Login via Supabase Auth, provider Google, dengan scope tambahan `https://www.googleapis.com/auth/calendar`.
-- Setelah login berhasil, cek email user terhadap 1 email yang di-hardcode di environment variable (`OWNER_EMAIL`). Kalau tidak cocok → langsung sign-out & tolak akses.
+- Setelah login berhasil, cek email user terhadap `owner_email` di tabel `app_settings` (Section 3) — bukan hardcode di environment variable, supaya ganti akun owner (misal buat testing) tinggal ubah 1 baris data. Kalau tidak cocok → langsung sign-out & tolak akses.
+- Proteksi ini berlaku 2 lapis: dicek di app saat login (poin di atas), **dan** dijaga ulang di level database lewat RLS — setiap tabel (kecuali `google_tokens`, lihat Section 3) hanya mengizinkan baris diakses kalau email yang sedang login cocok dengan `owner_email` di `app_settings`. Jadi proteksi tetap berlaku walau ada jalur akses lain di luar pengecekan login app.
 - Refresh token Google disimpan di tabel `google_tokens` (bukan di client) — dipakai Edge Function `calendar-proxy` untuk semua request ke Calendar API.
 
 ### 4.2 Offline-First Transaksi
@@ -163,7 +179,7 @@ Setiap task berikut punya kriteria selesai (Definition of Done) sendiri, sesuai 
 |---|---|
 | Setup project Supabase | Project dibuat, koneksi Postgres bisa diakses, `.env` tersimpan aman |
 | Setup Google Cloud project | OAuth client ID dibuat, Calendar API & Sheets API di-enable, Service Account dibuat & di-share ke 1 spreadsheet tujuan |
-| Buat schema database | Semua tabel di Section 3 dibuat via migration, RLS aktif dan hanya izinkan `OWNER_EMAIL` |
+| Buat schema database | Semua tabel di Section 3 dibuat via migration, RLS aktif dan hanya izinkan `owner_email` dari `app_settings` |
 | Setup Expo project | App kosong bisa jalan di Expo Go di iPhone, hot reload berfungsi |
 | Setup web project | App React kosong bisa di-deploy ke Vercel dan diakses via URL |
 

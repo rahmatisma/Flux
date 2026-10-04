@@ -3,6 +3,7 @@ workflow.md
 skill.md
 mobile/AGENTS.md
 mobile/.claude/
+doc/
 
 .env
 .env.*
