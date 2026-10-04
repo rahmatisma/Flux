@@ -6,3 +6,5 @@ skill.md
 .env.*
 !.env.example
 node_modules/
+
+secrets/
