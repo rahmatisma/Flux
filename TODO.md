@@ -14,7 +14,7 @@ Referensi kriteria selesai tiap task ada di `architecture.md` Section 5. File in
 | 0.2 | Setup Google Cloud project (OAuth + Calendar API + Sheets API + Service Account) | 🟢 | |
 | 0.3 | Buat schema database (semua tabel + RLS) | 🔴 | |
 | 0.4 | Setup Expo project (jalan di Expo Go) | 🟢 | |
-| 0.5 | Setup web project (deploy kosong ke Vercel) | 🟡 | Project React+Vite sudah jalan lokal, belum di-deploy ke Vercel |
+| 0.5 | Setup web project (deploy kosong ke Vercel) | 🟢 | Live di https://flux-lac-xi.vercel.app/ |
 
 ## Milestone 1 — Auth
 
