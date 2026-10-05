@@ -1,6 +1,9 @@
 import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Platform, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+import type { Session } from '@supabase/supabase-js';
 
 import { AnimatedIcon } from '@/components/animated-icon';
 import { HintRow } from '@/components/hint-row';
@@ -8,6 +11,8 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { WebBadge } from '@/components/web-badge';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { loginDenganGoogle, logoutGoogle } from '@/lib/loginGoogle';
+import { klienSupabase } from '@/lib/supabaseClient';
 
 function getDevMenuHint() {
   if (Platform.OS === 'web') {
@@ -29,6 +34,30 @@ function getDevMenuHint() {
 }
 
 export default function HomeScreen() {
+  const [sesi, setSesi] = useState<Session | null>(null);
+  const [sedangLogin, setSedangLogin] = useState(false);
+
+  useEffect(() => {
+    klienSupabase.auth.getSession().then(({ data }) => setSesi(data.session));
+
+    const { data: langganan } = klienSupabase.auth.onAuthStateChange((_event, sesiBaru) => {
+      setSesi(sesiBaru);
+    });
+
+    return () => langganan.subscription.unsubscribe();
+  }, []);
+
+  async function tanganiLoginGoogle() {
+    setSedangLogin(true);
+    try {
+      await loginDenganGoogle();
+    } catch (error) {
+      console.error('Gagal login dengan Google:', error);
+    } finally {
+      setSedangLogin(false);
+    }
+  }
+
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
@@ -37,6 +66,23 @@ export default function HomeScreen() {
           <ThemedText type="title" style={styles.title}>
             Halo World
           </ThemedText>
+        </ThemedView>
+
+        <ThemedView type="backgroundElement" style={styles.areaLogin}>
+          {sesi ? (
+            <>
+              <ThemedText type="small">Login sebagai {sesi.user.email}</ThemedText>
+              <Pressable onPress={logoutGoogle}>
+                <ThemedText type="linkPrimary">Keluar</ThemedText>
+              </Pressable>
+            </>
+          ) : (
+            <Pressable onPress={tanganiLoginGoogle} disabled={sedangLogin}>
+              <ThemedText type="linkPrimary">
+                {sedangLogin ? 'Memproses login...' : 'Login dengan Google'}
+              </ThemedText>
+            </Pressable>
+          )}
         </ThemedView>
 
         <ThemedText type="code" style={styles.code}>
@@ -62,6 +108,15 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  areaLogin: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    borderRadius: Spacing.four,
+  },
   container: {
     flex: 1,
     justifyContent: 'center',
