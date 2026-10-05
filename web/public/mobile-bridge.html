@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>Flux — Masuk...</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: system-ui, sans-serif;
+        background: #0a0a0a;
+        color: #fafafa;
+      }
+    </style>
+  </head>
+  <body>
+    <p id="pesan">Mengalihkan ke app...</p>
+    <script>
+      // Halaman jembatan buat login mobile: Supabase cuma mau redirect ke
+      // alamat https (bukan exp:// -- lihat workflow.md), jadi app minta
+      // Supabase balik ke sini dulu (bawa parameter "app" = alamat exp://
+      // app yang sebenarnya), baru di sini kita lempar ke app-nya.
+      var paramApp = new URLSearchParams(window.location.search).get('app');
+
+      if (!paramApp) {
+        document.getElementById('pesan').textContent =
+          'Alamat app tidak ditemukan. Tutup halaman ini dan coba login lagi dari app.';
+      } else {
+        window.location.replace(paramApp + window.location.hash);
+      }
+    </script>
+  </body>
+</html>
