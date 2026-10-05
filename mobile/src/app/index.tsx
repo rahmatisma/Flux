@@ -36,12 +36,50 @@ function getDevMenuHint() {
 export default function HomeScreen() {
   const [sesi, setSesi] = useState<Session | null>(null);
   const [sedangLogin, setSedangLogin] = useState(false);
+  const [pesanTolakAkses, setPesanTolakAkses] = useState<string | null>(null);
 
   useEffect(() => {
-    klienSupabase.auth.getSession().then(({ data }) => setSesi(data.session));
+    // Dipanggil tiap ada sesi baru (login) MAUPUN tiap app dibuka (sesi
+    // lama dipulihkan) -- supaya kalau owner_email diubah di tengah jalan,
+    // sesi lama yang udah gak diizinkan langsung ke-tolak juga, gak cuma
+    // dicek pas login doang.
+    async function tanganiSesi(sesiBaru: Session | null) {
+      if (!sesiBaru) {
+        setSesi(null);
+        return;
+      }
+
+      const { data: diizinkan, error } = await klienSupabase.rpc('is_owner');
+
+      if (error || !diizinkan) {
+        setPesanTolakAkses(`Akun ${sesiBaru.user.email} tidak diizinkan mengakses Flux.`);
+        await klienSupabase.auth.signOut();
+        setSesi(null);
+        return;
+      }
+
+      setPesanTolakAkses(null);
+
+      // provider_refresh_token cuma ada sesaat setelah login, sama kayak di
+      // web -- harus langsung dikirim ke Edge Function di sini, gak akan
+      // muncul lagi setelahnya.
+      if (sesiBaru.provider_refresh_token) {
+        klienSupabase.functions
+          .invoke('save-google-token', {
+            body: { tokenRefresh: sesiBaru.provider_refresh_token },
+          })
+          .catch((errorSimpanToken) => {
+            console.error('Gagal menyimpan refresh token Google:', errorSimpanToken);
+          });
+      }
+
+      setSesi(sesiBaru);
+    }
+
+    klienSupabase.auth.getSession().then(({ data }) => tanganiSesi(data.session));
 
     const { data: langganan } = klienSupabase.auth.onAuthStateChange((_event, sesiBaru) => {
-      setSesi(sesiBaru);
+      tanganiSesi(sesiBaru);
     });
 
     return () => langganan.subscription.unsubscribe();
@@ -67,6 +105,12 @@ export default function HomeScreen() {
             Halo World
           </ThemedText>
         </ThemedView>
+
+        {pesanTolakAkses && (
+          <ThemedText type="small" style={styles.pesanTolakAkses}>
+            {pesanTolakAkses}
+          </ThemedText>
+        )}
 
         <ThemedView type="backgroundElement" style={styles.areaLogin}>
           {sesi ? (
@@ -116,6 +160,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     borderRadius: Spacing.four,
+  },
+  pesanTolakAkses: {
+    color: '#e5484d',
+    textAlign: 'center',
   },
   container: {
     flex: 1,

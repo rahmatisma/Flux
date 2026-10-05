@@ -37,6 +37,11 @@
   font-size: 14px;
 }
 
+.pesan-tolak-akses {
+  font-size: 14px;
+  color: #e5484d;
+}
+
 .tombol-login {
   padding: 8px 18px;
   border-radius: 999px;

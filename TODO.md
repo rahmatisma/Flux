@@ -22,7 +22,7 @@ Referensi kriteria selesai tiap task ada di `architecture.md` Section 5. File in
 |---|---|---|---|
 | 1.1 | Login Google di web dashboard (+ scope Calendar) | 🟢 | Login berhasil dicoba manual, refresh token terkonfirmasi tersimpan di `google_tokens`. Sempat ketemu & diperbaiki 2 bug saat uji coba: GRANT tabel belum ke-setup di project asli (migration tambahan), dan Edge Function belum handle CORS. |
 | 1.2 | Login Google di mobile app | 🟢 | Login berhasil dicoba manual. Supabase ternyata gak bisa redirect langsung ke alamat khusus Expo Go (`exp://...`) walau udah didaftarin persis/wildcard di Dashboard — selalu nyasar ke Site URL fallback. Solusinya: ditambah "halaman jembatan" statis di web dashboard (`web/public/mobile-bridge.html`, alamat https biasa yang didukung Supabase) yang nerusin ke alamat `exp://` app lewat JS di browser HP. |
-| 1.3 | Proteksi akses single-user (`OWNER_EMAIL`) | 🔴 | |
+| 1.3 | Proteksi akses single-user (`OWNER_EMAIL`) | 🟢 | Dicoba manual pakai akun lain di web & mobile, berhasil ditolak + auto sign-out + pesan muncul. Pengecekan dibuat jalan pas login MAUPUN tiap app dibuka (bukan cuma pas login), pakai fungsi `is_owner()` yang udah disiapkan dari task 0.3. |
 
 ## Milestone 2 — Transaksi Keuangan (App)
 

@@ -41,18 +41,9 @@ async function buatSesiDariUrl(url: string) {
     throw errorSetSesi;
   }
 
-  // provider_refresh_token cuma ada sesaat di sini, sama kayak di web --
-  // harus langsung dikirim ke Edge Function, gak akan muncul lagi setelahnya.
-  if (params.provider_refresh_token) {
-    await klienSupabase.functions
-      .invoke('save-google-token', {
-        body: { tokenRefresh: params.provider_refresh_token },
-      })
-      .catch((errorSimpanToken) => {
-        console.error('Gagal menyimpan refresh token Google:', errorSimpanToken);
-      });
-  }
-
+  // Pengecekan owner & simpan refresh token Google ditangani di index.tsx
+  // lewat onAuthStateChange, sama kayak alur di web -- supaya token gak
+  // kesimpen duluan sebelum tau akunnya diizinkan atau enggak.
   return dataSesi.session;
 }
 

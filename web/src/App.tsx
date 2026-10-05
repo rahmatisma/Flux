@@ -27,19 +27,35 @@ const scopeCalendar = 'https://www.googleapis.com/auth/calendar'
 function App() {
   const [sesi, setSesi] = useState<Session | null>(null)
   const [sedangMuat, setSedangMuat] = useState(true)
+  const [pesanTolakAkses, setPesanTolakAkses] = useState<string | null>(null)
 
   useEffect(() => {
-    klienSupabase.auth.getSession().then(({ data }) => {
-      setSesi(data.session)
-      setSedangMuat(false)
-    })
+    // Dipanggil tiap ada sesi baru (login) MAUPUN tiap app dibuka (sesi
+    // lama dipulihkan) -- supaya kalau owner_email diubah di tengah jalan,
+    // sesi lama yang udah gak diizinkan langsung ke-tolak juga, gak cuma
+    // dicek pas login doang.
+    async function tanganiSesi(sesiBaru: Session | null) {
+      if (!sesiBaru) {
+        setSesi(null)
+        setSedangMuat(false)
+        return
+      }
 
-    const { data: langganan } = klienSupabase.auth.onAuthStateChange((event, sesiBaru) => {
-      setSesi(sesiBaru)
+      const { data: diizinkan, error } = await klienSupabase.rpc('is_owner')
+
+      if (error || !diizinkan) {
+        setPesanTolakAkses(`Akun ${sesiBaru.user.email} tidak diizinkan mengakses Flux.`)
+        await klienSupabase.auth.signOut()
+        setSesi(null)
+        setSedangMuat(false)
+        return
+      }
+
+      setPesanTolakAkses(null)
 
       // provider_refresh_token cuma ada sesaat setelah redirect balik dari Google --
       // harus ditangkep & dikirim ke Edge Function di sini, gak akan muncul lagi setelahnya.
-      if (event === 'SIGNED_IN' && sesiBaru?.provider_refresh_token) {
+      if (sesiBaru.provider_refresh_token) {
         klienSupabase.functions
           .invoke('save-google-token', {
             body: { tokenRefresh: sesiBaru.provider_refresh_token },
@@ -48,6 +64,15 @@ function App() {
             console.error('Gagal menyimpan refresh token Google:', error)
           })
       }
+
+      setSesi(sesiBaru)
+      setSedangMuat(false)
+    }
+
+    klienSupabase.auth.getSession().then(({ data }) => tanganiSesi(data.session))
+
+    const { data: langganan } = klienSupabase.auth.onAuthStateChange((_event, sesiBaru) => {
+      tanganiSesi(sesiBaru)
     })
 
     return () => langganan.subscription.unsubscribe()
@@ -77,6 +102,7 @@ function App() {
         <span className="status">Dalam pengembangan</span>
 
         <div className="area-login">
+          {pesanTolakAkses && <span className="pesan-tolak-akses">{pesanTolakAkses}</span>}
           {sedangMuat ? null : sesi ? (
             <>
               <span className="info-akun">Login sebagai {sesi.user.email}</span>
